@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Send, Sparkles, Brain, AlertTriangle, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Brain, AlertTriangle, TrendingUp, AlertCircle } from 'lucide-react';
 import type { ChatMessage } from '@/lib/types';
 import { analyzeUserMessage, type AIAnalysis } from '@/lib/openai';
 import { saveChatMessage, getChatHistory } from '@/lib/database';
@@ -28,6 +28,7 @@ export default function ChatAI({ onBack }: ChatAIProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [currentAnalysis, setCurrentAnalysis] = useState<AIAnalysis | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -78,6 +79,7 @@ export default function ChatAI({ onBack }: ChatAIProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
+    setApiError(null); // Limpar erro anterior
 
     try {
       // Preparar contexto do usuário
@@ -128,18 +130,34 @@ export default function ChatAI({ onBack }: ChatAIProps) {
         await saveChatMessage(userId, 'user', input);
         await saveChatMessage(userId, 'assistant', response, emoji, analysis);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao processar mensagem:', error);
 
-      const errorResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Desculpe, tive um problema técnico. Mas estou aqui para você! 💙 Pode tentar novamente?',
-        timestamp: new Date(),
-        emoji: '💙',
-      };
+      // Detectar erro de autenticação da API OpenAI
+      if (error?.message === 'OPENAI_AUTH_ERROR') {
+        setApiError('A chave da API OpenAI está inválida ou expirada. Configure uma chave válida nas variáveis de ambiente.');
+        
+        const errorResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: '🔑 Detectei um problema com a configuração da API OpenAI. A chave fornecida está inválida ou expirou. Por favor, configure uma nova chave válida para que eu possa te ajudar adequadamente. Você pode obter uma nova chave em: https://platform.openai.com/api-keys',
+          timestamp: new Date(),
+          emoji: '⚠️',
+        };
+        
+        setMessages((prev) => [...prev, errorResponse]);
+      } else {
+        // Outros erros
+        const errorResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Desculpe, tive um problema técnico momentâneo. 💙 Pode tentar novamente em alguns segundos?',
+          timestamp: new Date(),
+          emoji: '💙',
+        };
 
-      setMessages((prev) => [...prev, errorResponse]);
+        setMessages((prev) => [...prev, errorResponse]);
+      }
     } finally {
       setIsTyping(false);
     }
@@ -196,6 +214,33 @@ export default function ChatAI({ onBack }: ChatAIProps) {
           </div>
         </div>
       </div>
+
+      {/* API Error Banner */}
+      {apiError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+          <div className="max-w-4xl mx-auto px-4 py-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                  Erro de Configuração
+                </p>
+                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                  {apiError}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setApiError(null)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-100"
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Analysis Panel */}
       {currentAnalysis && (

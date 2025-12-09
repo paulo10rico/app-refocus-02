@@ -21,26 +21,27 @@ export default function Dashboard() {
     loadData();
   }, []);
 
-  const loadData = () => {
-    let userProgress = getUserProgress();
+  const loadData = async () => {
+    let userProgress = await getUserProgress();
     if (!userProgress) {
-      initializeProgress();
-      userProgress = getUserProgress();
+      await initializeProgress();
+      userProgress = await getUserProgress();
     }
     setProgress(userProgress);
     setStressLevel(userProgress?.stressLevel || 5);
-    setTasks(getDailyTasks());
+    const dailyTasks = await getDailyTasks();
+    setTasks(dailyTasks || []);
   };
 
-  const handleTaskToggle = (taskId: string) => {
-    toggleTaskCompletion(taskId);
-    loadData();
+  const handleTaskToggle = async (taskId: string) => {
+    await toggleTaskCompletion(taskId);
+    await loadData();
   };
 
-  const handleStressChange = (level: number) => {
+  const handleStressChange = async (level: number) => {
     setStressLevel(level);
-    updateStressLevel(level);
-    loadData();
+    await updateStressLevel(level);
+    await loadData();
   };
 
   const renderView = () => {
@@ -79,7 +80,10 @@ export default function Dashboard() {
                     <span className="text-gray-400">→</span>
                   </button>
 
-                  <button className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300">
+                  <button 
+                    onClick={() => alert('⚙️ Configurações em breve! Aqui você poderá personalizar o app.')}
+                    className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <SettingsIcon className="w-5 h-5 text-purple-600" />
                       <span className="font-medium text-gray-800">Configurações</span>
@@ -87,7 +91,10 @@ export default function Dashboard() {
                     <span className="text-gray-400">→</span>
                   </button>
 
-                  <button className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300">
+                  <button 
+                    onClick={() => alert('🎯 Meus Objetivos em breve! Aqui você poderá definir e acompanhar suas metas.')}
+                    className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">🎯</span>
                       <span className="font-medium text-gray-800">Meus Objetivos</span>
@@ -95,7 +102,10 @@ export default function Dashboard() {
                     <span className="text-gray-400">→</span>
                   </button>
 
-                  <button className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300">
+                  <button 
+                    onClick={() => setCurrentView('progress')}
+                    className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">📊</span>
                       <span className="font-medium text-gray-800">Estatísticas Detalhadas</span>
@@ -103,7 +113,15 @@ export default function Dashboard() {
                     <span className="text-gray-400">→</span>
                   </button>
 
-                  <button className="w-full flex items-center justify-between p-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-all duration-300">
+                  <button 
+                    onClick={() => {
+                      if (confirm('🚪 Tem certeza que deseja sair?')) {
+                        localStorage.clear();
+                        window.location.reload();
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">🚪</span>
                       <span className="font-medium text-red-600">Sair</span>
@@ -194,7 +212,7 @@ export default function Dashboard() {
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Tarefas de Hoje 📝</h2>
                 <div className="space-y-3">
-                  {tasks.map((task) => (
+                  {Array.isArray(tasks) && tasks.map((task) => (
                     <div
                       key={task.id}
                       onClick={() => handleTaskToggle(task.id)}

@@ -14,6 +14,23 @@ export const isSupabaseConfigured = () => {
   return supabase !== null;
 };
 
+// Status de configuração para UI
+export const getSupabaseStatus = () => {
+  if (isSupabaseConfigured()) {
+    return {
+      configured: true,
+      message: '✅ Sincronização em nuvem ativa',
+      mode: 'cloud'
+    };
+  }
+  return {
+    configured: false,
+    message: '📱 Modo offline - dados salvos localmente',
+    mode: 'local',
+    instruction: 'Para ativar sincronização em nuvem, vá em Configurações → Integrações → Supabase'
+  };
+};
+
 // Tipos do banco de dados
 export interface Database {
   public: {
